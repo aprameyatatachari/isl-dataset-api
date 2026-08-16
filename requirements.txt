@@ -1,5 +1,7 @@
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-beautifulsoup4==4.12.3
+# Pinned to the versions this app was verified against.
+# yt-dlp in particular must stay current: YouTube breaks older releases.
+fastapi==0.141.1
+uvicorn[standard]==0.52.3
+beautifulsoup4==4.15.0
 cloakbrowser==0.5.7
-yt-dlp==2024.12.13
+yt-dlp==2026.7.4

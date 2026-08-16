@@ -11,3 +11,11 @@ dependencies = [
     "uvicorn[standard]>=0.34.0",
     "yt-dlp>=2024.12.13",
 ]
+
+# Keep local formatting identical to the CI lint job (.github/workflows/ci-cd.yml).
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88

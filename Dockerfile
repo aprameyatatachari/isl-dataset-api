@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- Stage 1: build wheels so the runtime image carries no compiler toolchain --------
-FROM python:3.11-slim AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
@@ -11,7 +11,7 @@ COPY requirements.txt .
 RUN pip wheel --wheel-dir /wheels -r requirements.txt
 
 # ---- Stage 2: runtime ----------------------------------------------------------------
-FROM python:3.11-slim AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 
 # ffmpeg: required by yt-dlp to merge separate video/audio streams into clean .mp4.
 # The rest: shared libraries the CloakBrowser stealth Chromium links against, plus fonts

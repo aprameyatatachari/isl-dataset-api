@@ -97,7 +97,11 @@ CHALLENGE_TIMEOUT: Final[int] = int(os.getenv("ISL_CHALLENGE_TIMEOUT", "120"))
 YTDLP_TIMEOUT: Final[int] = int(os.getenv("ISL_YTDLP_TIMEOUT", "120"))
 DOWNLOAD_ATTEMPTS: Final[int] = int(os.getenv("ISL_DOWNLOAD_ATTEMPTS", "3"))
 PAGE_CONCURRENCY: Final[int] = int(os.getenv("ISL_PAGE_CONCURRENCY", "4"))
-HEADLESS: Final[bool] = os.getenv("ISL_HEADLESS", "1").lower() not in ("0", "false", "no")
+HEADLESS: Final[bool] = os.getenv("ISL_HEADLESS", "1").lower() not in (
+    "0",
+    "false",
+    "no",
+)
 PROXY: Final[str] = os.getenv("ISL_PROXY", "").strip()
 LICENSE_KEY: Final[str] = os.getenv("CLOAKBROWSER_LICENSE_KEY", "").strip()
 
@@ -109,13 +113,43 @@ INDEX_SELECTOR: Final[str] = os.getenv("ISL_INDEX_SELECTOR", "ul.az-columns li a
 # fallback scan — the az-columns selector already excludes the menus.
 NON_WORD_SLUGS: Final[frozenset[str]] = frozenset(
     {
-        "", "search-dictionary", "about-us", "contact", "contact-us", "privacy-policy",
-        "terms", "terms-of-use", "disclaimer", "sitemap", "home", "blog", "news", "faq",
-        "donate", "support", "login", "register", "wp-login.php", "wp-admin", "feed",
-        "category", "tag", "author", "page", "courses", "services", "dissertations",
-        "history", "indian-sign-language", "educational-services", "guidance-counselling",
-        "speech-language-therapy", "audiological-evaluation", "tutorial-for-the-deaf",
-        "purchase-the-isl-dictionary", "android-app-for-indian-sign-language",
+        "",
+        "search-dictionary",
+        "about-us",
+        "contact",
+        "contact-us",
+        "privacy-policy",
+        "terms",
+        "terms-of-use",
+        "disclaimer",
+        "sitemap",
+        "home",
+        "blog",
+        "news",
+        "faq",
+        "donate",
+        "support",
+        "login",
+        "register",
+        "wp-login.php",
+        "wp-admin",
+        "feed",
+        "category",
+        "tag",
+        "author",
+        "page",
+        "courses",
+        "services",
+        "dissertations",
+        "history",
+        "indian-sign-language",
+        "educational-services",
+        "guidance-counselling",
+        "speech-language-therapy",
+        "audiological-evaluation",
+        "tutorial-for-the-deaf",
+        "purchase-the-isl-dictionary",
+        "android-app-for-indian-sign-language",
         "what-is-the-purpose-of-this-website",
     }
 )
@@ -260,9 +294,16 @@ class BrowserManager:
                     return html
                 except (UpstreamChallengeError, UpstreamFetchError):
                     raise
-                except Exception as exc:  # noqa: BLE001 - playwright/browser-level failure
+                except (
+                    Exception
+                ) as exc:  # noqa: BLE001 - playwright/browser-level failure
                     last_error = exc
-                    log.warning("browser fetch failed (attempt %d) for %s: %s", attempt, url, exc)
+                    log.warning(
+                        "browser fetch failed (attempt %d) for %s: %s",
+                        attempt,
+                        url,
+                        exc,
+                    )
                 finally:
                     if page is not None:
                         try:
@@ -414,13 +455,18 @@ def parse_index(html: str) -> dict[str, str]:
                 continue
             slug = _slug_from_href(href, strict=strict)
             if slug and slug not in found:
-                found[slug] = normalize_media_url(href, page_url=INDEX_URL).rstrip("/") + "/"
+                found[slug] = (
+                    normalize_media_url(href, page_url=INDEX_URL).rstrip("/") + "/"
+                )
         return found
 
     # Preferred: the A–Z listing block. Fallback: every anchor on the page, menu-filtered.
     entries = collect(soup.select(INDEX_SELECTOR), strict=False)
     if not entries:
-        log.warning("index selector %r matched nothing; falling back to anchor scan", INDEX_SELECTOR)
+        log.warning(
+            "index selector %r matched nothing; falling back to anchor scan",
+            INDEX_SELECTOR,
+        )
         entries = collect(soup.find_all("a", href=True), strict=True)
 
     if not entries:
@@ -445,7 +491,9 @@ class DictionaryCache:
         return {
             "entries": len(self._entries),
             "loaded_at": self._loaded_at or None,
-            "age_seconds": round(time.time() - self._loaded_at, 1) if self._loaded_at else None,
+            "age_seconds": (
+                round(time.time() - self._loaded_at, 1) if self._loaded_at else None
+            ),
             "ttl_seconds": self._ttl,
             "last_error": self._last_error,
         }
@@ -570,7 +618,11 @@ def download_video(youtube_url: str, slug: str) -> Path:
                     delay = 2.0 * attempt
                     log.warning(
                         "yt-dlp attempt %d/%d failed for '%s' (%s); retrying in %.0fs",
-                        attempt, DOWNLOAD_ATTEMPTS, slug, exc, delay,
+                        attempt,
+                        DOWNLOAD_ATTEMPTS,
+                        slug,
+                        exc,
+                        delay,
                     )
                     time.sleep(delay)
         if last_error is not None:
@@ -672,7 +724,9 @@ async def fetch(
     except UpstreamChallengeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except UpstreamFetchError as exc:
-        raise HTTPException(status_code=502, detail=f"Failed to load word page: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"Failed to load word page: {exc}"
+        ) from exc
 
     youtube_url = await run_in_threadpool(extract_youtube_url, html, page_url=page_url)
     if not youtube_url:
@@ -684,7 +738,9 @@ async def fetch(
     try:
         path = await run_in_threadpool(download_video, youtube_url, slug)
     except yt_dlp.utils.DownloadError as exc:
-        raise HTTPException(status_code=500, detail=f"yt-dlp failed for '{slug}': {exc}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"yt-dlp failed for '{slug}': {exc}"
+        ) from exc
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(
             status_code=500, detail=f"Unexpected download failure for '{slug}': {exc}"
@@ -745,7 +801,9 @@ if __name__ == "__main__":
         # On Windows the Proactor loop cannot share a listening socket between worker
         # processes (OSError WinError 87), and Chromium needs the Proactor loop. Scale out
         # with containers instead.
-        log.warning("ISL_WORKERS=%d is unsupported on Windows; falling back to 1", workers)
+        log.warning(
+            "ISL_WORKERS=%d is unsupported on Windows; falling back to 1", workers
+        )
         workers = 1
 
     uvicorn.run(
