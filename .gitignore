@@ -8,3 +8,15 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Downloaded media cache
+downloads/
+
+# CloakBrowser persistent profile
+.browser-profile/
+*.mp4
+*.part
+
+# Local env
+.env
+.env.*

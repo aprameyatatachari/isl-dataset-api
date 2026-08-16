@@ -1,0 +1,39 @@
+services:
+  isl-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/isl-dataset-api:latest
+    container_name: isl-dataset-api
+    restart: unless-stopped
+    ports:
+      - "6767:6767"
+    environment:
+      ISL_DOWNLOAD_DIR: /data/downloads
+      ISL_PROFILE_DIR: /data/browser-profile
+      ISL_CACHE_TTL: "21600"
+      ISL_PAGE_CONCURRENCY: "4"
+      ISL_LOG_LEVEL: INFO
+      # Optional: CloakBrowser Pro key lifts the 1-concurrent-session limit.
+      CLOAKBROWSER_LICENSE_KEY: "${CLOAKBROWSER_LICENSE_KEY:-}"
+      # Optional: route the browser through a proxy if the host IP gets rate-limited.
+      ISL_PROXY: "${ISL_PROXY:-}"
+    volumes:
+      # Persists downloaded MP4s *and* the browser profile (Cloudflare clearance cookie),
+      # so restarts do not re-pay the challenge or re-download videos.
+      - isl-data:/data
+    # Chromium needs more than the default 64 MB of shared memory.
+    shm_size: "1gb"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:6767/healthz', timeout=4).status==200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  isl-data:
