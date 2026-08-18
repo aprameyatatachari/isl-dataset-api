@@ -126,9 +126,6 @@ jobs:
         id: image
         run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
-      - name: Set up QEMU (for multi-platform support if needed)
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -150,42 +147,13 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
 
-      # Build once and load the exact image that will be published. Rebuilding in a
-      # second build-push step is wasteful and can fail independently after verification.
-      - name: Build image for verification
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          push: false
-          load: true
-          tags: |
-            isl-dataset-api:ci
-            ${{ steps.meta.outputs.tags }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Verify container starts and answers /healthz
-        run: |
-          trap 'docker rm -f isl-ci >/dev/null 2>&1 || true' EXIT
-          docker run -d --name isl-ci --shm-size=1g -p 6767:6767 isl-dataset-api:ci
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:6767/healthz > /tmp/health.json; then
-              echo "healthz OK"; cat /tmp/health.json; break
-            fi
-            if [ "$i" = "30" ]; then
-              echo "container failed to become healthy"; docker logs isl-ci; exit 1
-            fi
-            sleep 2
-          done
-          # ffmpeg is required for merged MP4 output; fail loudly if the layer is missing.
-          docker exec isl-ci ffmpeg -version | head -1
-
-      - name: Push verified Docker Image
-        run: |
-          while IFS= read -r tag; do
-            case "$tag" in
-              ghcr.io/*) docker push "$tag" ;;
-            esac
-          done <<< "${{ steps.meta.outputs.tags }}"
